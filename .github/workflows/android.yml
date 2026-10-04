@@ -83,9 +83,9 @@ jobs:
           {
             echo "### Release APK"
             echo
-            echo "File: `$(basename "$apk")`"
+            echo "File: $(basename "$apk")"
             echo
-            echo "Commit: `$GITHUB_SHA`"
+            echo "Commit: $GITHUB_SHA"
             echo
             if [[ -n "${KEYSTORE_PATH:-}" ]]; then
               echo "Signing: supplied release key."
@@ -95,9 +95,9 @@ jobs:
             echo
             echo "| Hash Type | Hash Value |"
             echo "| --- | --- |"
-            echo "| SHA256 | `$(sha256sum "$apk" | awk '{ print $1 }')` |"
-            echo "| SHA1 | `$(sha1sum "$apk" | awk '{ print $1 }')` |"
-            echo "| MD5 | `$(md5sum "$apk" | awk '{ print $1 }')` |"
+            echo "| SHA256 | $(sha256sum "$apk" | awk '{ print $1 }') |"
+            echo "| SHA1 | $(sha1sum "$apk" | awk '{ print $1 }') |"
+            echo "| MD5 | $(md5sum "$apk" | awk '{ print $1 }') |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Release APK

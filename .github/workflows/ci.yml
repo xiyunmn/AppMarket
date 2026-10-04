@@ -61,17 +61,17 @@ jobs:
           {
             echo "### Debug APK"
             echo
-            echo "File: `$(basename "$apk")`"
+            echo "File: $(basename "$apk")"
             echo
-            echo "Commit: `$GITHUB_SHA`"
+            echo "Commit: $GITHUB_SHA"
             echo
             echo "Signing: Android debug key; no signing Secrets required."
             echo
             echo "| Hash Type | Hash Value |"
             echo "| --- | --- |"
-            echo "| SHA256 | `$(sha256sum "$apk" | awk '{ print $1 }')` |"
-            echo "| SHA1 | `$(sha1sum "$apk" | awk '{ print $1 }')` |"
-            echo "| MD5 | `$(md5sum "$apk" | awk '{ print $1 }')` |"
+            echo "| SHA256 | $(sha256sum "$apk" | awk '{ print $1 }') |"
+            echo "| SHA1 | $(sha1sum "$apk" | awk '{ print $1 }') |"
+            echo "| MD5 | $(md5sum "$apk" | awk '{ print $1 }') |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Debug APK

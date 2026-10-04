@@ -1,10 +1,14 @@
-name: Android Release
+name: Android CI
 
 on:
   workflow_dispatch:
   push:
     branches: ["main"]
-    tags: ["v*"]
+    paths-ignore:
+      - "README.md"
+      - "doc/**"
+  pull_request:
+    branches: ["main"]
     paths-ignore:
       - "README.md"
       - "doc/**"
@@ -13,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: android-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,40 +41,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Prepare optional release signing
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          KEYSTORE_PASS: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "$SIGNING_KEY" ]]; then
-            echo "No private signing key supplied; using the project's debug-signing fallback."
-            exit 0
-          fi
-          if [[ -z "$KEYSTORE_PASS" || -z "$KEY_ALIAS" || -z "$KEY_PASSWORD" ]]; then
-            echo "::error::A signing key was supplied but its password or alias is missing."
-            exit 1
-          fi
-          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/keystore.jks"
-          chmod 600 "$RUNNER_TEMP/keystore.jks"
-          {
-            echo "KEYSTORE_PATH=$RUNNER_TEMP/keystore.jks"
-            echo "KEYSTORE_PASS=$KEYSTORE_PASS"
-            echo "KEY_ALIAS=$KEY_ALIAS"
-            echo "KEY_PASSWORD=$KEY_PASSWORD"
-          } >> "$GITHUB_ENV"
-
-      - name: Build Release APK
-        run: ./gradlew :app:android:assembleRelease --no-daemon --stacktrace
+      - name: Build Debug APK
+        run: ./gradlew :app:android:assembleDebug --no-daemon --stacktrace
 
       - name: Verify APK and display hashes
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t apks < <(find app/android/build/outputs/apk/release -type f -name '*.apk')
+          mapfile -t apks < <(find app/android/build/outputs/apk/debug -type f -name '*.apk')
           if [[ ${#apks[@]} -ne 1 ]]; then
             echo "::error::Expected exactly one APK, found ${#apks[@]}."
             exit 1
@@ -81,17 +59,13 @@ jobs:
           "$apksigner" verify --verbose --print-certs "$apk"
           echo "APK_FILE=$apk" >> "$GITHUB_ENV"
           {
-            echo "### Release APK"
+            echo "### Debug APK"
             echo
             echo "File: `$(basename "$apk")`"
             echo
             echo "Commit: `$GITHUB_SHA`"
             echo
-            if [[ -n "${KEYSTORE_PATH:-}" ]]; then
-              echo "Signing: supplied release key."
-            else
-              echo "Signing: Android debug key (project fallback); no signing Secrets required."
-            fi
+            echo "Signing: Android debug key; no signing Secrets required."
             echo
             echo "| Hash Type | Hash Value |"
             echo "| --- | --- |"
@@ -100,15 +74,11 @@ jobs:
             echo "| MD5 | `$(md5sum "$apk" | awk '{ print $1 }')` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Release APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: AppMarket-release-${{ github.run_number }}
+          name: AppMarket-debug-${{ github.run_number }}
           path: ${{ env.APK_FILE }}
           if-no-files-found: error
           retention-days: 30
           archive: false
-
-      - name: Remove signing key
-        if: always()
-        run: rm -f "$RUNNER_TEMP/keystore.jks"
